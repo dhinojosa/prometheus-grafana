@@ -42,7 +42,7 @@ All four apps under `apps/` expose metrics endpoints for Prometheus to scrape.
 
 ## Building and Running Apps
 
-### spring-app
+### spring-app (port 8080)
 
 ```bash
 cd apps/spring-app
@@ -52,6 +52,16 @@ java -jar target/coffee-spring-0.0.1-SNAPSHOT.jar
 ```
 
 Metrics endpoint: `http://localhost:8080/actuator/prometheus`
+
+### quarkus-app (port 8081)
+
+```bash
+cd apps/quarkus-app
+mvn quarkus:dev          # dev mode with live reload
+mvn package -DskipTests  # build uber-jar
+```
+
+Metrics endpoint: `http://localhost:8081/q/metrics`
 
 ### Custom metrics exposed
 
