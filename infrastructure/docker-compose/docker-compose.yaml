@@ -8,10 +8,6 @@ services:
       - "9090:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-    depends_on:
-      - spring-app
-      - quarkus-app
-      - jmx-app
 
   grafana:
     image: grafana/grafana:latest
@@ -22,3 +18,18 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - prometheus
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=coffee
+      - POSTGRES_PASSWORD=coffee
+      - POSTGRES_DB=coffee
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
