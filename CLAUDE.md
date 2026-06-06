@@ -6,22 +6,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a demo/training project for a talk on Prometheus and Grafana, covering JVM monitoring, PromQL, Grafana dashboards, Kubernetes/Prometheus Operator, and Argo Rollouts canary deployments. See `outline.md` for the full talk structure.
 
-## Infrastructure
+## Demo Structure
 
-### Docker Compose (local dev)
+Each demo lives under `demos/` and is self-contained with its own `docker-compose.yaml` and `prometheus/prometheus.yml`.
 
-Located in `infrastructure/docker-compose/`. Brings up Prometheus (port 9090) and Grafana (port 3000).
+- **`demos/prometheus/`** — Minimal Prometheus + Grafana stack; entry point for the talk.
+- **`demos/jmx-app/`** — Plain Java app (no framework) demonstrating JMX MBeans bridged to Prometheus via the JMX Java Agent. Prometheus + Grafana only (no Postgres).
+- **`demos/spring-app/`** — Spring Boot coffee fulfillment app. Metrics via Spring Boot Actuator at `/actuator/prometheus`. Prometheus + Grafana + Postgres.
+- **`demos/quarkus-app/`** — Quarkus coffee fulfillment app. Metrics via Micrometer at `/q/metrics`. Prometheus + Grafana + Postgres.
+- **`demos/prom-operator/`** — Kubernetes Prometheus Operator demo.
+- **`demos/canary-app/`** — Argo Rollouts canary deployment demo driven by Prometheus metrics on a local `kind` cluster.
+
+### Docker Compose (per demo)
+
+Each demo's docker-compose stack is started from its own directory:
 
 ```bash
-cd infrastructure/docker-compose
+cd demos/<demo-name>
 docker compose up -d
 docker compose down
 ```
 
 - Grafana default credentials: `admin` / `admin`
-- Postgres runs on port 5432, credentials: `coffee` / `coffee`, database: `coffee`. Data is persisted in a named volume (`postgres_data`).
-- Prometheus config is mounted from `infrastructure/docker-compose/prometheus/prometheus.yml` (must exist before starting)
-- Grafana provisioning files go in `infrastructure/docker-compose/grafana/`
+- Postgres (where used): port 5432, credentials `coffee` / `coffee`, database `coffee`
+- Prometheus config is mounted from `./prometheus/prometheus.yml` inside each demo directory
 
 ### Kubernetes
 
@@ -31,21 +39,12 @@ Manifests live under `infrastructure/kubernetes/` with subdirectories:
 - `grafana/` — Grafana Kubernetes resources
 - `argo-rollouts/` — Canary deployment configs using Argo Rollouts with Prometheus metrics gates
 
-## Application Structure
-
-All four apps under `apps/` expose metrics endpoints for Prometheus to scrape.
-
-- **`spring-app/`** — Spring Boot coffee fulfillment/orders app. Exposes RESTful endpoints that receive traffic. Metrics exposed via Spring Boot Actuator at `/actuator/prometheus` using Micrometer. Connects to Postgres; HikariCP connection pool metrics are exposed automatically.
-- **`quarkus-app/`** — Quarkus coffee fulfillment/orders app with the same domain as `spring-app`. Exposes RESTful endpoints and Micrometer-based metrics for Prometheus scraping. Connects to Postgres; HikariCP pool metrics exposed automatically via `quarkus-micrometer`.
-- **`jmx-app/`** — Plain Java app (no framework) that demonstrates what JMX is, how to expose MBeans, and how to bridge them to Prometheus using the JMX Prometheus Java Agent.
-- **`canary-app/`** — App deployed to a local `kind` Kubernetes cluster to demonstrate Argo Rollouts canary deployments driven by Prometheus metrics. Argo Rollouts uses a `AnalysisTemplate` with PromQL queries against live scraped metrics to automatically promote or abort the canary.
-
 ## Building and Running Apps
 
 ### spring-app (port 8080)
 
 ```bash
-cd apps/spring-app
+cd demos/spring-app
 mvn spring-boot:run          # requires docker-compose stack running
 mvn package -DskipTests      # build fat jar
 java -jar target/coffee-spring-0.0.1-SNAPSHOT.jar
@@ -56,7 +55,7 @@ Metrics endpoint: `http://localhost:8080/actuator/prometheus`
 ### quarkus-app (port 8081)
 
 ```bash
-cd apps/quarkus-app
+cd demos/quarkus-app
 mvn quarkus:dev          # dev mode with live reload
 mvn package -DskipTests  # build uber-jar
 ```
