@@ -16,3 +16,7 @@ scrape_configs:
     metrics_path: /q/metrics
     static_configs:
       - targets: [ "host.docker.internal:8081" ]
+
+  - job_name: coffee-machine-jmx
+    static_configs:
+      - targets: [ "host.docker.internal:9404" ]
