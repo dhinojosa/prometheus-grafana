@@ -31,7 +31,7 @@ public class CoffeeMachine implements CoffeeMachineMBean {
     }
 
     private void startWorker() {
-        Thread worker = new Thread(() -> {
+        Thread worker = Thread.ofVirtual().name("coffee-worker").start(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
                     if ("PAUSED".equals(machineStatus)) {
@@ -44,7 +44,7 @@ public class CoffeeMachine implements CoffeeMachineMBean {
 
                     long start = System.currentTimeMillis();
 
-                    if (forceFailure.getAndSet(false) || Math.random() < 0.10) {
+                    if (forceFailure.getAndSet(false) || Math.random() < 0.10 || getWaterRemaining() == 0 || getBeansRemaining() == 0) {
                         ordersFailed.incrementAndGet();
                         machineStatus = "FAILED";
                         Thread.sleep(2000);
@@ -65,9 +65,9 @@ public class CoffeeMachine implements CoffeeMachineMBean {
                     Thread.currentThread().interrupt();
                 }
             }
-        }, "coffee-worker");
-        worker.setDaemon(true);
-        worker.start();
+        });
+//        worker.setDaemon(true);
+//        worker.start();
     }
 
     @Override public long getOrdersReceived()    { return ordersReceived.get(); }
@@ -87,8 +87,19 @@ public class CoffeeMachine implements CoffeeMachineMBean {
 
     @Override public void pauseMachine()    { machineStatus = "PAUSED"; }
     @Override public void resumeMachine()   { if ("PAUSED".equals(machineStatus)) machineStatus = "RUNNING"; }
-    @Override public void refillBeans()     { beansRemaining.set(100); }
-    @Override public void refillWater()     { waterRemaining.set(100); }
+
+    @Override
+    public void refillBeans() {
+        beansRemaining.set(100);
+        if (waterRemaining.get() > 0 && !"PAUSED".equals(machineStatus)) machineStatus = "RUNNING";
+    }
+
+    @Override
+    public void refillWater() {
+        waterRemaining.set(100);
+        if (beansRemaining.get() > 0 && !"PAUSED".equals(machineStatus)) machineStatus = "RUNNING";
+    }
+
     @Override public void simulateFailure() { forceFailure.set(true); }
 
     @Override
