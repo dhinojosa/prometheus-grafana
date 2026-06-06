@@ -1,0 +1,37 @@
+---
+startDelaySeconds: 0
+rules:
+  - pattern: 'com.evolutionnext.coffee<type=CoffeeMachine><>OrdersReceived'
+    name: coffee_machine_orders_received_total
+    type: COUNTER
+    help: Total coffee orders received
+
+  - pattern: 'com.evolutionnext.coffee<type=CoffeeMachine><>OrdersCompleted'
+    name: coffee_machine_orders_completed_total
+    type: COUNTER
+    help: Total coffee orders completed successfully
+
+  - pattern: 'com.evolutionnext.coffee<type=CoffeeMachine><>OrdersFailed'
+    name: coffee_machine_orders_failed_total
+    type: COUNTER
+    help: Total coffee orders that failed
+
+  - pattern: 'com.evolutionnext.coffee<type=CoffeeMachine><>CurrentQueueDepth'
+    name: coffee_machine_queue_depth
+    type: GAUGE
+    help: Current number of orders waiting in the queue
+
+  - pattern: 'com.evolutionnext.coffee<type=CoffeeMachine><>AveragePreparationTimeMs'
+    name: coffee_machine_avg_preparation_time_ms
+    type: GAUGE
+    help: Running average drink preparation time in milliseconds
+
+  - pattern: 'com.evolutionnext.coffee<type=CoffeeMachine><>BeansRemaining'
+    name: coffee_machine_beans_remaining
+    type: GAUGE
+    help: Coffee beans remaining before refill needed
+
+  - pattern: 'com.evolutionnext.coffee<type=CoffeeMachine><>WaterRemaining'
+    name: coffee_machine_water_remaining
+    type: GAUGE
+    help: Water units remaining before refill needed
