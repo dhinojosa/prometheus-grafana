@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: quarkus-app
+  namespace: coffee
+  labels:
+    app: quarkus-app
+spec:
+  selector:
+    matchLabels:
+      app: quarkus-app
+  endpoints:
+    - port: http
+      path: /q/metrics
+      interval: 15s
