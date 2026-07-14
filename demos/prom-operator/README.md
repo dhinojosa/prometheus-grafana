@@ -21,9 +21,11 @@ Don't combine with `-Dquarkus.container-image.build=true` for multiplatform — 
 
 ### 2. Enable Kubernetes in Docker Desktop
 
+
 Docker Desktop → Settings → Kubernetes → enable. Confirm your `kubectl` context
 points at it:
 
+Go to the _prom-operator_ directory
 ```bash
 kubectl config use-context docker-desktop
 ```
