@@ -46,13 +46,11 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo update
 
 helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-  --namespace prometheus \
-  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+  --namespace prometheus
 ```
 
-Setting `serviceMonitorSelectorNilUsesHelmValues=false` lets Prometheus pick up
-`ServiceMonitor` resources from any namespace, not just ones labelled with the
-Helm release name (needed for the `coffee` namespace `ServiceMonitor` below).
+No extra `--set` flags needed — defaults are enough, once the `ServiceMonitor`
+itself is set up correctly (see step 7).
 
 Wait for everything to come up:
 
@@ -87,6 +85,23 @@ The deployment picks up `QUARKUS_DATASOURCE_*` env vars from the
 kubectl apply -f kubernetes/quarkus-app-servicemonitor.yaml
 ```
 
+The `ServiceMonitor` lives in the `prometheus` namespace — not `coffee`, where
+the `quarkus-app` Service actually is. That's deliberate: a `ServiceMonitor`
+doesn't have to live next to what it monitors. Two separate selectors make this
+work:
+
+- The Prometheus CR's `serviceMonitorNamespaceSelector` decides which
+  *namespaces* to search for `ServiceMonitor` objects — kube-prometheus-stack
+  defaults this to `{}` (all namespaces), so it already finds ours in
+  `prometheus`.
+- The Prometheus CR's `serviceMonitorSelector` decides which `ServiceMonitor`
+  *objects* (by label) get picked up — kube-prometheus-stack defaults this to
+  requiring a `release: kube-prometheus-stack` label, which is why the
+  manifest carries one.
+- The `ServiceMonitor`'s own `spec.namespaceSelector.matchNames: [coffee]`
+  is what actually lets it reach across into the `coffee` namespace to find
+  the `quarkus-app` Service via `spec.selector.matchLabels`.
+
 This tells the Prometheus Operator to scrape `/q/metrics` on the `quarkus-app`
 service every 15s.
 
@@ -114,6 +129,22 @@ Port-forward Grafana (default credentials `admin` / `prom-operator`):
 ```bash
 kubectl port-forward -n prometheus svc/kube-prometheus-stack-grafana 3000:80
 ```
+
+### 9. Generate load
+
+A freshly deployed app has no traffic, so `orders_placed_total`,
+`inventory_stock_level`, and `order_fulfillment_duration_seconds` are all
+either zero or empty — there's nothing to see in Prometheus or Grafana yet.
+[`generate-load.sh`](generate-load.sh) exercises all three, plus a deliberate
+failure so the auto-instrumented HTTP metrics show a non-2xx status too.
+Requires `jq`. Run with the `quarkus-app` port-forward from step 8 active:
+
+```bash
+./generate-load.sh
+```
+
+Re-run it a few times if you want the Grafana/Prometheus graphs to show
+movement over a longer window rather than a single burst.
 
 ## Teardown
 

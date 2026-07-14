@@ -2,10 +2,14 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: quarkus-app
-  namespace: coffee
+  namespace: prometheus
   labels:
     app: quarkus-app
+    release: kube-prometheus-stack
 spec:
+  namespaceSelector:
+    matchNames:
+      - coffee
   selector:
     matchLabels:
       app: quarkus-app
