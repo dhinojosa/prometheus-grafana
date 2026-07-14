@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: canary
+  labels:
+    app: load-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+        - name: load-generator
+          image: curlimages/curl:8.10.1
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              until curl -sf -X POST http://quarkus-app.canary.svc.cluster.local:8081/inventory/restock \
+                -H "Content-Type: application/json" -d '{"item":"LATTE","quantity":1000000}'; do
+                sleep 2
+              done
+              while true; do
+                curl -s -o /dev/null -X POST http://quarkus-app.canary.svc.cluster.local:8081/orders \
+                  -H "Content-Type: application/json" -d '{"item":"LATTE","quantity":1}'
+                sleep 0.5
+              done

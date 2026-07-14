@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: success-rate
+  namespace: canary
+spec:
+  args:
+    - name: canary-hash
+  metrics:
+    - name: error-rate
+      interval: 15s
+      count: 4
+      # Pass while the canary's HTTP error ratio stays at or below 10%.
+      successCondition: result[0] <= 0.1
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.prometheus.svc.cluster.local:9090
+          query: |
+            (
+              sum(rate(http_server_requests_seconds_count{job="quarkus-app", rollouts_pod_template_hash="{{args.canary-hash}}", outcome="SERVER_ERROR"}[1m]))
+              or on() vector(0)
+            )
+            /
+            (
+              sum(rate(http_server_requests_seconds_count{job="quarkus-app", rollouts_pod_template_hash="{{args.canary-hash}}"}[1m]))
+              or on() vector(1)
+            )

@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: quarkus-app
+  namespace: canary
+spec:
+  replicas: 5
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: quarkus-app
+  template:
+    metadata:
+      labels:
+        app: quarkus-app
+    spec:
+      containers:
+        - name: quarkus-app
+          image: dhinojosa/prometheus-quarkus-app:0.0.2-SNAPSHOT
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: quarkus-app-config
+          env:
+            # Bump to e.g. "0.5" to simulate a bad release: the canary
+            # AnalysisTemplate's error-rate query should catch it and
+            # abort/roll back the rollout.
+            - name: CHAOS_ERROR_RATE
+              value: "0.0"
+          readinessProbe:
+            httpGet:
+              path: /q/metrics
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+  strategy:
+    canary:
+      maxSurge: "25%"
+      maxUnavailable: 0
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 30s
+        - analysis:
+            templates:
+              - templateName: success-rate
+            args:
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
+        - setWeight: 50
+        - pause:
+            duration: 30s
+        - setWeight: 100

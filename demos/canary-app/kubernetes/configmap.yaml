@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quarkus-app-config
+  namespace: canary
+data:
+  QUARKUS_DATASOURCE_USERNAME: coffee
+  QUARKUS_DATASOURCE_PASSWORD: coffee
+  QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres.canary.svc.cluster.local:5432/coffee

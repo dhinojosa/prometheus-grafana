@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: quarkus-app
+  namespace: canary
+  labels:
+    app: quarkus-app
+spec:
+  selector:
+    matchLabels:
+      app: quarkus-app
+  endpoints:
+    - port: http
+      path: /q/metrics
+      interval: 15s
+      relabelings:
+        # Expose the Argo Rollouts pod-template-hash as a metric label so the
+        # AnalysisTemplate's PromQL can scope queries to just the canary pods.
+        - sourceLabels: [__meta_kubernetes_pod_label_rollouts_pod_template_hash]
+          targetLabel: rollouts_pod_template_hash
