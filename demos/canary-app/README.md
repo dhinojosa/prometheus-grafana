@@ -52,12 +52,8 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo update
 
 helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-  --namespace prometheus \
-  --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false
+  --namespace prometheus
 ```
-
-`serviceMonitorSelectorNilUsesHelmValues=false` lets Prometheus discover the
-`quarkus-app` ServiceMonitor in the `canary` namespace.
 
 ### 4. Install the Argo Rollouts controller
 
@@ -68,7 +64,7 @@ kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/rele
 ### 5. Install ArgoCD
 
 ```bash
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 ```
 
 Get the initial admin password:
@@ -92,7 +88,21 @@ kubectl apply -f kubernetes/argocd-application.yaml
 ArgoCD will sync everything else in `kubernetes/` — Postgres, the
 `quarkus-app-config` ConfigMap, the `quarkus-app` Service, the
 `ServiceMonitor`, the `AnalysisTemplate`, the `Rollout`, and the
-`load-generator`. Watch it sync in the ArgoCD UI or with:
+`load-generator`.
+
+The `Application`'s `destination.namespace` is `canary`, but
+`servicemonitor.yaml` declares its own `metadata.namespace: prometheus` —
+ArgoCD honors that explicit namespace rather than the destination default
+(the `default` AppProject permits deploying to any namespace). The
+`ServiceMonitor` lives next to the Prometheus Operator, not next to the
+`quarkus-app` Service it monitors, and reaches across into `canary` via
+`spec.namespaceSelector.matchNames: [canary]` — a `ServiceMonitor` doesn't
+have to live in the same namespace as what it monitors. It also carries a
+`release: kube-prometheus-stack` label, which is what satisfies
+kube-prometheus-stack's default `serviceMonitorSelector` (no Helm flag
+needed — see step 3).
+
+Watch the sync in the ArgoCD UI or with:
 
 ```bash
 kubectl -n canary get applications -A

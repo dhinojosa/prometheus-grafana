@@ -2,10 +2,14 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: quarkus-app
-  namespace: canary
+  namespace: prometheus
   labels:
     app: quarkus-app
+    release: kube-prometheus-stack
 spec:
+  namespaceSelector:
+    matchNames:
+      - canary
   selector:
     matchLabels:
       app: quarkus-app
