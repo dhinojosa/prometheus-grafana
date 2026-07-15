@@ -38,7 +38,7 @@ spec:
             periodSeconds: 5
           resources:
             requests:
-              cpu: 50m
+              cpu: 75m
               memory: 256Mi
   strategy:
     canary:
