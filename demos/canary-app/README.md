@@ -118,7 +118,7 @@ kubectl argo rollouts get rollout quarkus-app -n canary --watch
 Or open the Argo Rollouts dashboard:
 
 ```bash
-kubectl argo rollouts dashboard
+kubectl argo rollouts dashboard -n canary
 ```
 
 ## Demo: a "good" release
