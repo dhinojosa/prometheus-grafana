@@ -1,13 +1,17 @@
-# coffee-machine (JMX Demo)
+# coffee-machine (JMX + JFR Demo)
 
 Plain Java CLI app — no framework. Simulates a coffee machine running in a loop,
 exposing a JMX MBean for live inspection via JConsole or JDK Mission Control,
-and a Prometheus-compatible HTTP endpoint via the JMX Prometheus Java Agent.
+a Prometheus-compatible HTTP endpoint via the JMX Prometheus Java Agent, and a
+second, code-based bridge from JFR (Java Flight Recorder) events straight to
+Prometheus.
 
 The story: JMX has always been the JVM's built-in telemetry system, but it speaks
 a proprietary protocol that Prometheus can't scrape. The JMX Java Agent bridges the
 two with zero code changes — it attaches at startup and exposes every MBean as a
-plain HTTP metrics endpoint.
+plain HTTP metrics endpoint. JFR has no equivalent off-the-shelf agent: it's a rich,
+low-overhead *event stream* built into every JVM, but turning those events into
+Prometheus metrics is on you — see [Part 6](#part-6--jfr-jvm-events-with-no-off-the-shelf-bridge).
 
 ---
 
@@ -124,6 +128,38 @@ Leave the Prometheus Graph tab open on `coffee_machine_queue_depth` and switch t
     Replay the pause/resume and simulateFailure operations from steps 11–13 while the
     dashboard is visible to show the full picture in one view.
 
+### Part 6 — JFR: JVM Events With No Off-the-Shelf Bridge
+
+The simulator has been exposing a *second* metrics endpoint the whole time — unlike
+the JMX one, this port is live from the moment the process starts, with no
+`-javaagent` flag involved.
+
+17. Hit it directly:
+    ```bash
+    curl http://localhost:9406/metrics
+    ```
+    Point out `jvm_jfr_gc_pause_seconds` and `jvm_jfr_allocated_bytes_total`. Contrast
+    with Part 2: there was no agent to attach here. `CoffeeMachineSimulator.main()`
+    opens a `jdk.jfr.consumer.RecordingStream`, subscribes to two JFR event types
+    (`jdk.GarbageCollection`, `jdk.ObjectAllocationInNewTLAB`), and pushes each event
+    straight into a Prometheus `Histogram` / `Counter` as it arrives — see
+    `startJfrToPrometheusBridge()` in
+    [CoffeeMachineSimulator.java](src/main/java/com/evolutionnext/coffee/CoffeeMachineSimulator.java).
+    JFR streams events for free; the bridge to Prometheus is the part you write.
+
+18. Confirm the `coffee-machine-jfr` target is **UP** in Prometheus (**Status → Targets**),
+    then run:
+
+    | Query | What it shows |
+    |-------|---------------|
+    | `rate(jvm_jfr_allocated_bytes_total[1m])` | Allocation rate — bytes/sec, straight from JFR's per-TLAB allocation events |
+    | `histogram_quantile(0.95, rate(jvm_jfr_gc_pause_seconds_bucket[5m]))` | p95 GC pause time |
+    | `jvm_jfr_gc_pause_seconds_count` | How many GC events JFR has observed so far |
+
+    Optionally add these as a second Grafana panel alongside the coffee machine's own
+    business metrics — same dashboard, one row showing *what the app is doing*, one row
+    showing *what the JVM underneath it is doing*.
+
 ---
 
 ## Reference
@@ -159,6 +195,8 @@ Leave the Prometheus Graph tab open on `coffee_machine_queue_depth` and switch t
 
 ### Prometheus Metrics
 
+Via the JMX Prometheus Java Agent, port 9404 (Part 2):
+
 | Metric | Type |
 |--------|------|
 | `coffee_machine_orders_received_total` | counter |
@@ -168,3 +206,10 @@ Leave the Prometheus Graph tab open on `coffee_machine_queue_depth` and switch t
 | `coffee_machine_avg_preparation_time_ms` | gauge |
 | `coffee_machine_beans_remaining` | gauge |
 | `coffee_machine_water_remaining` | gauge |
+
+Via the code-based JFR bridge, port 9406 (Part 6) — always running, no agent flag needed:
+
+| Metric | Type |
+|--------|------|
+| `jvm_jfr_gc_pause_seconds` | histogram |
+| `jvm_jfr_allocated_bytes_total` | counter |
