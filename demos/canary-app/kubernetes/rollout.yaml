@@ -29,7 +29,7 @@ spec:
             # AnalysisTemplate's error-rate query should catch it and
             # abort/roll back the rollout.
             - name: CHAOS_ERROR_RATE
-              value: "0.5"
+              value: "0.0"
           readinessProbe:
             httpGet:
               path: /q/metrics
